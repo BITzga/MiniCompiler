@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.python.antlr.AST;
 import org.python.core.__builtin__;
 
+import javax.print.DocFlavor;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -93,8 +94,21 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
     }
 
     @Override
-    public ASTNode visitAssignmentExpression(CParser.AssignmentExpressionContext ctx) {
-        return (ASTNode) new ASTIntegerConstant();
+    public ASTNode visitConditionalExpression(CParser.ConditionalExpressionContext ctx) {
+        return  (ASTExpression)visit(ctx.logicalOrExpression().
+                logicalAndExpression(0).
+                inclusiveOrExpression(0).
+                exclusiveOrExpression(0).
+                andExpression(0).
+                equalityExpression(0).
+                relationalExpression(0).
+                shiftExpression(0).
+                additiveExpression(0).
+                multiplicativeExpression(0).
+                castExpression(0).
+                unaryExpression().
+                postfixExpression().
+                primaryExpression());
     }
 
 
@@ -120,15 +134,23 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
     public ASTNode visitExpressionStatement(CParser.ExpressionStatementContext ctx) {
         List<ASTExpression> list = new ArrayList<>();
         for(int i=0;i<ctx.expression().assignmentExpression().size();i++){
-            list.add((ASTExpression)visit(ctx.expression().assignmentExpression().get(i)));
+            if(ctx.expression().assignmentExpression().get(i).conditionalExpression()!=null)
+            list.add((ASTExpression)visit(ctx.expression().assignmentExpression().get(i).conditionalExpression()));
         }
         return  new ASTExpressionStatement(list);
     }
 
     @Override
+    public ASTNode visitAssignmentExpression(CParser.AssignmentExpressionContext ctx) {
+        return (ASTNode) new ASTIntegerConstant();
+    }
+
+    @Override
     public ASTNode visitJumpStatement(CParser.JumpStatementContext ctx) {
         if(ctx.Return()!=null){
-            return new ASTReturnStatement();
+            LinkedList<ASTExpression> list = new LinkedList<>();
+            list.add((ASTExpression) visit(ctx.expression().assignmentExpression(0).conditionalExpression()));
+            return new ASTReturnStatement(list);
         }else if(ctx.Goto()!=null){
             return new ASTGotoStatement();
         }else if(ctx.Break()!=null){
@@ -156,11 +178,16 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
             stat= (ASTStatement)visit(ctx.expression());
         }
         else{
-            stat = (ASTStatement) visit(ctx.statement());
+            List<ASTNode> list = new ArrayList<>();
+            if(ctx.statement()!=null&&ctx.statement().selectionStatement()!=null&&ctx.statement().selectionStatement().expression()!=null)
+                list.add(visit(ctx.statement().selectionStatement().expression()));
+            if(ctx.statement()!=null&&ctx.statement().selectionStatement()!=null)
+                list.add(visit(ctx.statement().selectionStatement().statement(0).compoundStatement()));
+            ASTCompoundStatement statement = new ASTCompoundStatement(list);
+            stat = statement;
         }
         return new ASTIterationStatement(init,cond,step,stat);
     }
-
 
 
     @Override
@@ -231,8 +258,11 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
                 if(context.Constant()!=null){
                     Integer tokenId = ctx.start.getTokenIndex();
                     return new ASTIntegerConstant(Integer.parseInt(context.Constant().getText()), tokenId);
+                }else if(context.Identifier()!=null){
+                    return (ASTPostfixExpression)visit(ctx.castExpression(0).unaryExpression().postfixExpression());
+                }else{
+                    return new ASTPostfixExpression();
                 }
-                return new ASTIntegerConstant(0,0);
 
             }else{
                 String value =null;
@@ -268,7 +298,22 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
     public ASTNode visitPrimaryExpression(CParser.PrimaryExpressionContext ctx) {
         if(ctx.Constant()!=null){
             return new ASTIntegerConstant(Integer.parseInt(ctx.Constant().getText()),0);
+        }else if(ctx.Identifier()!=null){
+            return new ASTPostfixExpression(new ASTIdentifier(ctx.Identifier().getText(),ctx.start.getTokenIndex()),new ASTToken("postfix",ctx.start.getTokenIndex()));
         }
         return new ASTIntegerConstant();
     }
+
+    @Override
+    public ASTNode visitPostfixExpression(CParser.PostfixExpressionContext ctx) {
+        ASTPostfixExpression expression = new ASTPostfixExpression();
+        if(ctx.primaryExpression().Identifier()!=null)
+            expression.op = new ASTToken(ctx.primaryExpression().Identifier().getText(),ctx.primaryExpression().start.getTokenIndex());
+        if(ctx.primaryExpression().Identifier()!=null&&ctx.argumentExpressionList()!=null&&
+                ctx.argumentExpressionList(0).assignmentExpression(0)!=null&&
+                ctx.argumentExpressionList(0).assignmentExpression(0).conditionalExpression()!=null)
+            expression.expr = (ASTExpression) visit(ctx.argumentExpressionList(0).assignmentExpression(0).conditionalExpression());
+        return expression;
+    }
 }
+

@@ -24,7 +24,7 @@ public class Learn {
                 "int a=1+1*2;"+
                 "int fibonacci ( int n );\n" +
                 "int main ( ) {\n" +
-                "  int a = 10;\n" +
+                "  int a = 10+1*2;\n" +
                 "  int res = fibonacci ( a ) ;\n" +
                 "  _OUTPUT ( res ) ;\n" +
                 "  return 0 ;\n" +
