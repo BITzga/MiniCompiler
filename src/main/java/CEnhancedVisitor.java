@@ -166,14 +166,25 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
 
     @Override
     public ASTNode visitIterationStatement(CParser.IterationStatementContext ctx) {
-        LinkedList<ASTExpression> init = new LinkedList<>();
+        List<ASTToken> sp = new LinkedList<>();
+        List<ASTInitList> ins = new LinkedList<>();
+        List<CParser.DeclarationSpecifierContext> specifierContexts = ctx.forCondition().forDeclaration().declarationSpecifiers().declarationSpecifier();
+        for(int i=0;i<specifierContexts.size();i++){
+            sp.add((ASTToken)visit(specifierContexts.get(i)));
+        }
+        List<CParser.InitDeclaratorContext> initContext = ctx.forCondition().forDeclaration().initDeclaratorList().initDeclarator();
+        for (int i=0;i<initContext.size();i++){
+            ins.add((ASTInitList) visit(initContext.get(i)));
+
+        }
+        ASTDeclaration init = new ASTDeclaration(sp,ins);
         LinkedList<ASTExpression> cond = new LinkedList<>();
         LinkedList<ASTExpression> step = new LinkedList<>();
+
+        cond.add(new ASTConditionExpression());
+        step.add(new ASTPostfixExpression());
+
         ASTStatement stat;
-        init.add(visit(ctx.forCondition().forDeclaration()));
-        System.out.println("helo "+ctx.forCondition().forDeclaration());
-        System.out.println("helo 1"+ctx.forCondition().forExpression());
-        System.out.println("fs"+ctx.forCondition().expression());
         if(ctx.expression()!=null){
             stat= (ASTStatement)visit(ctx.expression());
         }
@@ -186,9 +197,18 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
             ASTCompoundStatement statement = new ASTCompoundStatement(list);
             stat = statement;
         }
-        return new ASTIterationStatement(init,cond,step,stat);
+        return new ASTIterationDeclaredStatement(init,cond,step,stat);
     }
 
+    @Override
+    public ASTNode visitForExpression(CParser.ForExpressionContext ctx) {
+        return new ASTConditionExpression();
+    }
+
+    @Override
+    public ASTNode visitForDeclaration(CParser.ForDeclarationContext ctx) {
+        return super.visitForDeclaration(ctx);
+    }
 
     @Override
     public ASTNode visitDeclaration(CParser.DeclarationContext ctx) {
