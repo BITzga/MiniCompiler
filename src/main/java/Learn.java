@@ -20,7 +20,9 @@ import java.util.stream.Stream;
 
 public class Learn {
     public static void main(String[] args) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException, IOException {
-        String s = "int fibonacci ( int n );\n" +
+        String s = "\n" +
+                "int a=1+1*2;"+
+                "int fibonacci ( int n );\n" +
                 "int main ( ) {\n" +
                 "  int a = 10;\n" +
                 "  int res = fibonacci ( a ) ;\n" +

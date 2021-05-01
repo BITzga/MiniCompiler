@@ -1,5 +1,6 @@
 import ast.*;
 import bit.minisys.minicc.parser.internal.antlr.A;
+import bit.minisys.minicc.pp.internal.C;
 import bit.minisys.minicc.pp.internal.S;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.python.antlr.AST;
@@ -165,11 +166,15 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
     @Override
     public ASTNode visitDeclaration(CParser.DeclarationContext ctx) {
         ASTDeclaration.Builder builder = new ASTDeclaration.Builder();
-        for(int i=0;i<ctx.declarationSpecifiers().declarationSpecifier().size();i++){
-            builder.addSpecfiers(visit(ctx.declarationSpecifiers().declarationSpecifier(i)));
+        if(ctx.declarationSpecifiers()!=null&&ctx.declarationSpecifiers().declarationSpecifier()!=null){
+            for(int i=0;i<ctx.declarationSpecifiers().declarationSpecifier().size();i++){
+                builder.addSpecfiers(visit(ctx.declarationSpecifiers().declarationSpecifier(i)));
+            }
         }
-        for (int i=0;i<ctx.initDeclaratorList().initDeclarator().size();i++){
-            builder.addInitList(visit(ctx.initDeclaratorList().initDeclarator(i)));
+        if(ctx.initDeclaratorList()!=null&&ctx.initDeclaratorList().initDeclarator()!=null){
+            for (int i=0;i<ctx.initDeclaratorList().initDeclarator().size();i++){
+                builder.addInitList(visit(ctx.initDeclaratorList().initDeclarator(i)));
+            }
         }
         return (ASTNode) builder.build();
     }
@@ -180,14 +185,90 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
         ASTInitList.Builder builder = new ASTInitList.Builder();
 
         builder.setDeclarator((ASTDeclarator) visit(ctx.declarator()));
-        if(ctx.initializer()!=null&&ctx.initializer().initializerList()!=null){
-            for(int i=0;i<ctx.initializer().initializerList().initializer().size();i++){
-                builder.addInitialize(visit(ctx.initializer().initializerList().initializer(i)));
+        if(ctx!=null&&ctx.initializer()!=null&&ctx.initializer().assignmentExpression()!=null){
+            CParser.AdditiveExpressionContext context =
+                    ctx.
+                    initializer().
+                    assignmentExpression().
+                    conditionalExpression().
+                    logicalOrExpression().
+                    logicalAndExpression(0).
+                    inclusiveOrExpression(0).
+                    exclusiveOrExpression(0).
+                    andExpression(0).
+                    equalityExpression(0).
+                    relationalExpression(0).
+                    shiftExpression(0).
+                    additiveExpression(0);
+            List<CParser.MultiplicativeExpressionContext> list = context.multiplicativeExpression();
+
+
+            for(int i=0;i<list.size();i++) {
+                builder.addInitialize(visit(list.get(i)));
             }
+
         }
+
         return builder.build();
     }
 
 
 
+    @Override
+    public ASTNode visitMultiplicativeExpression(CParser.MultiplicativeExpressionContext ctx) {
+
+            ASTToken token = new ASTToken();
+            if(ctx.castExpression()==null)
+                return new ASTBinaryExpression();
+            if(ctx.castExpression().size()==1){
+                CParser.PrimaryExpressionContext context =ctx.
+                        castExpression(0).
+                        unaryExpression().
+                        postfixExpression().
+                        primaryExpression();
+                System.out.println("mak"+context.Constant());
+
+                if(context.Constant()!=null){
+                    Integer tokenId = ctx.start.getTokenIndex();
+                    return new ASTIntegerConstant(Integer.parseInt(context.Constant().getText()), tokenId);
+                }
+                return new ASTIntegerConstant(0,0);
+
+            }else{
+                String value =null;
+                Integer tokenId;
+                if(ctx.Star()!=null){
+                    value = ctx.Star(0).getText();
+                }else if(ctx.Div()!=null){
+                    value=ctx.Div(0).getText();
+                }else if(ctx.Mod()!=null){
+                    value=ctx.Mod(0).getText();
+                }
+                tokenId = ctx.start.getTokenIndex();
+                CParser.PrimaryExpressionContext contextA =
+                        ctx.castExpression(0).
+                        unaryExpression().
+                        postfixExpression().
+                        primaryExpression();
+                CParser.PrimaryExpressionContext contextB =
+                        ctx.castExpression(1).
+                                unaryExpression().
+                                postfixExpression().
+                                primaryExpression();
+                ASTIntegerConstant tempA = (ASTIntegerConstant)visit(contextA);
+                ASTIntegerConstant tempB = (ASTIntegerConstant)visit(contextB);
+                tokenId = ctx.start.getTokenIndex();
+                tempA.tokenId = tokenId+1;
+                tempB.tokenId = tokenId+2;
+                return new ASTBinaryExpression(new ASTToken(value,tokenId),tempA,tempB);
+            }
+    }
+
+    @Override
+    public ASTNode visitPrimaryExpression(CParser.PrimaryExpressionContext ctx) {
+        if(ctx.Constant()!=null){
+            return new ASTIntegerConstant(Integer.parseInt(ctx.Constant().getText()),0);
+        }
+        return new ASTIntegerConstant();
+    }
 }
