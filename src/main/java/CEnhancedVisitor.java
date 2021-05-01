@@ -170,7 +170,7 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
         LinkedList<ASTExpression> cond = new LinkedList<>();
         LinkedList<ASTExpression> step = new LinkedList<>();
         ASTStatement stat;
-
+        init.add(visit(ctx.forCondition().forDeclaration()));
         System.out.println("helo "+ctx.forCondition().forDeclaration());
         System.out.println("helo 1"+ctx.forCondition().forExpression());
         System.out.println("fs"+ctx.forCondition().expression());
