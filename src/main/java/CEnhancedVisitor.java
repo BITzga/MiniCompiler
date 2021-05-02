@@ -149,7 +149,8 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
     public ASTNode visitJumpStatement(CParser.JumpStatementContext ctx) {
         if(ctx.Return()!=null){
             LinkedList<ASTExpression> list = new LinkedList<>();
-            list.add((ASTExpression) visit(ctx.expression().assignmentExpression(0).conditionalExpression()));
+            if(ctx.expression()!=null&&ctx.expression().assignmentExpression(0)!=null)
+                list.add((ASTExpression) visit(ctx.expression().assignmentExpression(0).conditionalExpression()));
             return new ASTReturnStatement(list);
         }else if(ctx.Goto()!=null){
             return new ASTGotoStatement();
@@ -168,14 +169,17 @@ public class CEnhancedVisitor extends CBaseVisitor<ASTNode>{
     public ASTNode visitIterationStatement(CParser.IterationStatementContext ctx) {
         List<ASTToken> sp = new LinkedList<>();
         List<ASTInitList> ins = new LinkedList<>();
-        List<CParser.DeclarationSpecifierContext> specifierContexts = ctx.forCondition().forDeclaration().declarationSpecifiers().declarationSpecifier();
-        for(int i=0;i<specifierContexts.size();i++){
-            sp.add((ASTToken)visit(specifierContexts.get(i)));
-        }
-        List<CParser.InitDeclaratorContext> initContext = ctx.forCondition().forDeclaration().initDeclaratorList().initDeclarator();
-        for (int i=0;i<initContext.size();i++){
-            ins.add((ASTInitList) visit(initContext.get(i)));
+        if(ctx.forCondition().forDeclaration()!=null){
+            List<CParser.DeclarationSpecifierContext> specifierContexts = ctx.forCondition().forDeclaration().declarationSpecifiers().declarationSpecifier();
+            for(int i=0;i<specifierContexts.size();i++){
+                sp.add((ASTToken)visit(specifierContexts.get(i)));
+            }
 
+            List<CParser.InitDeclaratorContext> initContext = ctx.forCondition().forDeclaration().initDeclaratorList().initDeclarator();
+            for (int i=0;i<initContext.size();i++){
+                ins.add((ASTInitList) visit(initContext.get(i)));
+
+            }
         }
         ASTDeclaration init = new ASTDeclaration(sp,ins);
         LinkedList<ASTExpression> cond = new LinkedList<>();
